@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="max-width: 600px;">
+    <h2>🔄 Perform Monthly Reconciliation</h2>
+    <form method="POST">
+        <div class="form-group">
+            <label>Month</label>
+            <select name="month" required>
+                <option value="Jan">January</option>
+                <option value="Feb">February</option>
+                <option value="Mar">March</option>
+                <option value="Apr">April</option>
+                <option value="May">May</option>
+                <option value="Jun">June</option>
+                <option value="Jul">July</option>
+                <option value="Aug">August</option>
+                <option value="Sep">September</option>
+                <option value="Oct">October</option>
+                <option value="Nov">November</option>
+                <option value="Dec">December</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Year</label>
+            <input type="number" name="year" required value="2026">
+        </div>
+        <div class="form-group">
+            <label>Opening Bank Balance ($)</label>
+            <input type="number" name="opening_balance" step="0.01" required>
+        </div>
+        <div class="form-group">
+            <label>Closing Bank Balance ($)</label>
+            <input type="number" name="closing_balance" step="0.01" required>
+        </div>
+        <button type="submit" class="btn btn-success">Perform Reconciliation</button>
+        <a href="{{ url_for('reconciliation') }}" class="btn btn-danger">Cancel</a>
+    </form>
+</div>
+{% endblock %}
