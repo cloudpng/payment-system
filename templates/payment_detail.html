@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>📄 Payment Details: {{ payment.payment_id }}</h2>
+        <span class="status-badge status-{{ payment.status.value.lower() }}">{{ payment.status.value }}</span>
+    </div>
+    
+    <div style="margin-top: 1.5rem;">
+        <h3>Basic Information</h3>
+        <table>
+            <tr><td><strong>Payee:</strong></td><td>{{ payment.payee_name }}</td></tr>
+            <tr><td><strong>Amount:</strong></td><td>${{ "%.2f"|format(payment.amount) }}</td></tr>
+            <tr><td><strong>Purpose:</strong></td><td>{{ payment.purpose }}</td></tr>
+            <tr><td><strong>Document Ref:</strong></td><td>{{ payment.payment_document_ref }}</td></tr>
+            <tr><td><strong>Date:</strong></td><td>{{ payment.date_initiated.strftime('%Y-%m-%d %H:%M') }}</td></tr>
+        </table>
+    </div>
+    
+    <div style="margin-top: 1.5rem;">
+        <h3>Workflow Progress</h3>
+        
+        <div class="workflow-step {% if auth and auth.fully_authorized %}completed{% else %}pending{% endif %}">
+            <div class="step-icon {% if auth and auth.fully_authorized %}done{% else %}wait{% endif %}">
+                {% if auth and auth.fully_authorized %}✓{% else %}2{% endif %}
+            </div>
+            <div>
+                <strong>Dual Authorization (FF3/FF4)</strong><br>
+                {% if auth %}
+                    FF3 Registrar: {{ '✓ Signed' if auth.ff3_registrar_id else '⏳ Pending' }} | 
+                    FF3 Director: {{ '✓ Signed' if auth.ff3_director_id else '⏳ Pending' }}<br>
+                    FF4 Registrar: {{ '✓ Signed' if auth.ff4_registrar_id else '⏳ Pending' }} | 
+                    FF4 Director: {{ '✓ Signed' if auth.ff4_director_id else '⏳ Pending' }}
+                {% else %}
+                    Waiting for authorization...
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if not auth or not auth.fully_authorized %}
+            {% if session.user_role in ['REGISTRAR', 'DIRECTOR_CORPORATE_SERVICES'] %}
+            <div style="margin: 1rem 0; padding: 1rem; background: #f8f9fa; border-radius: 4px;">
+                <strong>Sign Authorization:</strong><br>
+                <form method="POST" action="{{ url_for('authorize_payment', payment_id=payment.id) }}" style="display: inline;">
+                    <input type="hidden" name="document" value="FF3">
+                    <button type="submit" class="btn btn-warning">Sign FF3</button>
+                </form>
+                <form method="POST" action="{{ url_for('authorize_payment', payment_id=payment.id) }}" style="display: inline;">
+                    <input type="hidden" name="document" value="FF4">
+                    <button type="submit" class="btn btn-warning">Sign FF4</button>
+                </form>
+            </div>
+            {% endif %}
+        {% endif %}
+        
+        <div class="workflow-step {% if fund %}completed{% else %}pending{% endif %}">
+            <div class="step-icon {% if fund %}done{% else %}wait{% endif %}">
+                {% if fund %}✓{% else %}3{% endif %}
+            </div>
+            <div>
+                <strong>Funds Sufficiency Check</strong><br>
+                {% if fund %}
+                    Bank Balance: ${{ "%.2f"|format(fund.commercial_bank_balance) }} | 
+                    Required: ${{ "%.2f"|format(fund.amount_required) }} | 
+                    Decision: <strong>{{ fund.routing_decision }}</strong>
+                {% else %}
+                    Waiting for funds check...
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if auth and auth.fully_authorized and not fund %}
+            {% if session.user_role in ['ACCOUNTS_OFFICER', 'FINANCE_OFFICER'] %}
+            <form method="POST" action="{{ url_for('check_funds', payment_id=payment.id) }}">
+                <button type="submit" class="btn btn-primary">Check Funds</button>
+            </form>
+            {% endif %}
+        {% endif %}
+        
+        <div class="workflow-step {% if cheque and cheque.custody_with_director %}completed{% else %}pending{% endif %}">
+            <div class="step-icon {% if cheque and cheque.custody_with_director %}done{% else %}wait{% endif %}">
+                {% if cheque and cheque.custody_with_director %}✓{% else %}4{% endif %}
+            </div>
+            <div>
+                <strong>Cheque Generation & Signing</strong><br>
+                {% if cheque %}
+                    Cheque #: {{ cheque.cheque_number }} | 
+                    Registrar: {{ '✓' if cheque.registrar_signature_id else '⏳' }} | 
+                    Director: {{ '✓' if cheque.director_signature_id else '⏳' }} | 
+                    Custody: {{ '✓' if cheque.custody_with_director else '⏳' }}
+                {% else %}
+                    Waiting for cheque generation...
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if fund and fund.routing_decision == 'Commercial_Bank' and not cheque %}
+            {% if session.user_role in ['ACCOUNTS_OFFICER', 'FINANCE_OFFICER'] %}
+            <form method="POST" action="{{ url_for('generate_cheque', payment_id=payment.id) }}">
+                <div class="form-group">
+                    <label>Cheque Number</label>
+                    <input type="text" name="cheque_number" required placeholder="CHQ-2026-XXXX">
+                </div>
+                <button type="submit" class="btn btn-primary">Generate Cheque</button>
+            </form>
+            {% endif %}
+        {% endif %}
+        
+        {% if cheque and not cheque.custody_with_director %}
+            {% if session.user_role in ['REGISTRAR', 'DIRECTOR_CORPORATE_SERVICES'] %}
+            <form method="POST" action="{{ url_for('sign_cheque', payment_id=payment.id) }}">
+                <button type="submit" class="btn btn-warning">Sign Cheque</button>
+            </form>
+            {% endif %}
+        {% endif %}
+        
+        <div class="workflow-step {% if disb %}completed{% else %}pending{% endif %}">
+            <div class="step-icon {% if disb %}done{% else %}wait{% endif %}">
+                {% if disb %}✓{% else %}6{% endif %}
+            </div>
+            <div>
+                <strong>Disbursement & Register</strong><br>
+                {% if disb %}
+                    Method: {{ disb.disbursement_method }} | 
+                    Register: Page {{ disb.register_page_number }}, Entry {{ disb.register_entry_number }}<br>
+                    Bank Receipt: {{ '✓ Recorded' if disb.bank_receipt_recorded else '⏳ Pending' }}
+                {% else %}
+                    Waiting for disbursement...
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if cheque and cheque.custody_with_director and not disb %}
+            {% if session.user_role in ['DIRECTOR_CORPORATE_SERVICES', 'ACCOUNTS_OFFICER'] %}
+            <form method="POST" action="{{ url_for('disburse_payment', payment_id=payment.id) }}">
+                <div class="form-group">
+                    <label>Disbursement Method</label>
+                    <select name="method" required>
+                        <option value="HAND_DELIVERY">Hand Delivery</option>
+                        <option value="BANK_DEPOSIT">Bank Deposit</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Register Page Number</label>
+                    <input type="number" name="register_page" required min="1">
+                </div>
+                <div class="form-group">
+                    <label>Register Entry Number</label>
+                    <input type="number" name="register_entry" required min="1">
+                </div>
+                <button type="submit" class="btn btn-success">Disburse & Record</button>
+            </form>
+            {% endif %}
+        {% endif %}
+        
+        {% if disb and not disb.bank_receipt_recorded %}
+            {% if session.user_role == 'ACCOUNTS_OFFICER' %}
+            <form method="POST" action="{{ url_for('record_bank_receipt', payment_id=payment.id) }}">
+                <button type="submit" class="btn btn-success">Record Bank Receipt</button>
+            </form>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
