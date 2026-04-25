@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="max-width: 600px;">
+    <h2>➕ Initiate New Payment</h2>
+    <form method="POST">
+        <div class="form-group">
+            <label>Payment Document Reference</label>
+            <input type="text" name="document_ref" required placeholder="e.g., INV-2026-0425-001">
+        </div>
+        <div class="form-group">
+            <label>Payee Name</label>
+            <input type="text" name="payee_name" required placeholder="Full legal name">
+        </div>
+        <div class="form-group">
+            <label>Amount ($)</label>
+            <input type="number" name="amount" step="0.01" min="0.01" required placeholder="0.00">
+        </div>
+        <div class="form-group">
+            <label>Purpose / Description</label>
+            <textarea name="purpose" rows="3" required placeholder="Detailed purpose of payment..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-success">Initiate Payment</button>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-danger">Cancel</a>
+    </form>
+</div>
+{% endblock %}
