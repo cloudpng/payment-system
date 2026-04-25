@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+<h2 style="margin-bottom: 1.5rem;">📊 Dashboard</h2>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="number">{{ total }}</div>
+        <div class="label">Total Payments</div>
+    </div>
+    <div class="stat-card">
+        <div class="number" style="color: #27ae60;">{{ completed }}</div>
+        <div class="label">Completed</div>
+    </div>
+    <div class="stat-card">
+        <div class="number" style="color: #e74c3c;">{{ deferred }}</div>
+        <div class="label">Deferred</div>
+    </div>
+    <div class="stat-card">
+        <div class="number" style="color: #f39c12;">{{ pending }}</div>
+        <div class="label">Pending</div>
+    </div>
+    <div class="stat-card">
+        <div class="number" style="color: #9b59b6;">${{ "%.2f"|format(bank_balance) }}</div>
+        <div class="label">Bank Balance</div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>⚡ Quick Actions</h2>
+    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+        {% if user_role in ['REGISTRAR', 'DIRECTOR_CORPORATE_SERVICES'] %}
+            <a href="{{ url_for('new_payment') }}" class="btn btn-primary">➕ New Payment</a>
+        {% endif %}
+        <a href="{{ url_for('list_payments') }}" class="btn btn-success">📋 View All Payments</a>
+        <a href="{{ url_for('reconciliation') }}" class="btn btn-warning">🔄 Reconciliation</a>
+    </div>
+</div>
+
+<div class="card">
+    <h2>📋 Recent Payments</h2>
+    <table>
+        <thead>
+            <tr><th>ID</th><th>Payee</th><th>Amount</th><th>Status</th><th>Date</th></tr>
+        </thead>
+        <tbody>
+            {% for p in recent %}
+            <tr>
+                <td><a href="{{ url_for('view_payment', payment_id=p.id) }}">{{ p.payment_id }}</a></td>
+                <td>{{ p.payee_name }}</td>
+                <td>${{ "%.2f"|format(p.amount) }}</td>
+                <td><span class="status-badge status-{{ p.status.value.lower() }}">{{ p.status.value }}</span></td>
+                <td>{{ p.date_initiated.strftime('%Y-%m-%d') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
