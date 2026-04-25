@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h2>🔄 Reconciliation History</h2>
+        {% if session.user_role == 'ACCOUNTS_OFFICER' %}
+        <a href="{{ url_for('new_reconciliation') }}" class="btn btn-primary">➕ New Reconciliation</a>
+        {% endif %}
+    </div>
+    <table>
+        <thead>
+            <tr><th>Recon ID</th><th>Period</th><th>Opening</th><th>Closing</th><th>Variance</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+            {% for r in reconciliations %}
+            <tr>
+                <td>{{ r.reconciliation_id }}</td>
+                <td>{{ r.month }} {{ r.year }}</td>
+                <td>${{ "%.2f"|format(r.opening_bank_balance) }}</td>
+                <td>${{ "%.2f"|format(r.closing_bank_balance) }}</td>
+                <td style="color: {{ '#27ae60' if r.variance == 0 else '#e74c3c' }};">${{ "%.2f"|format(r.variance) }}</td>
+                <td><span class="status-badge {{ 'status-completed' if r.reconciled else 'status-deferred' }}">{{ 'Reconciled' if r.reconciled else 'Unreconciled' }}</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
